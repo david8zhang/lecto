@@ -1,0 +1,14 @@
+<video autoplay></video>
+<input id='thing' />
+<button id='submit'>
+	o shit
+</button>
+
+<script type="text/javascript">
+	document.getElementById("submit").addEventListener("click", function(){
+		var string = document.getElementById('thing').value;
+		console.log('string', string);
+		var video = document.querySelector('video');
+		video.src = string
+	});
+</script>
