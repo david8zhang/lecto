@@ -1,0 +1,26 @@
+{
+  "name": "lecto",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+     "start": node app.js
+  },
+  "dependencies": {
+    "cors": "^2.8.4",
+    "express": "^4.16.1",
+    "io": "^0.1.10",
+    "socket.io": "^2.0.3",
+    "url": "^0.11.0",
+    "ws": "^3.2.0"
+  },
+  "engines": {
+    "node": "8.6.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}
