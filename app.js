@@ -8,7 +8,7 @@ var server = http.createServer(function(req, res){
 	res.writeHead(200,{ 'Content-Type': 'text/html' }); 
 	res.end('<h1>Hello Socket Lover!</h1>');
 });
-server.listen(process.env.port || 8080, '0.0.0.0');
+server.listen(process.env.PORT || 8080, '0.0.0.0');
 
 // Create a Socket.IO instance, passing it our server
 var socket = io.listen(server);
