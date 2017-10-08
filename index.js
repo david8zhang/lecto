@@ -24,4 +24,4 @@ io.on('connection', function(socket){
 });
 
 
-http.listen(3000, '0.0.0.0');
+http.listen(process.env.PORT || 8080, '0.0.0.0');
