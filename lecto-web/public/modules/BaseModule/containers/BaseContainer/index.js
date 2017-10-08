@@ -9,7 +9,12 @@ import firebase from 'firebase';
 import { ModalContainer, ModalDialog } from 'react-modal-dialog';
 import { Navbar, Jumbotron, About } from '../../../../components';
 import { StreamListContainer, StreamRoomContainer, streamActions } from '../../../StreamModule';
-import { ProfileContainer, profileActions } from '../../../ProfileModule';
+import { 
+	ProfileContainer,
+	ProfileLinkContainer,
+	AuthContainer,
+	profileActions
+} from '../../../ProfileModule';
 
 /** Configuration  */
 import { baseModuleConfig } from '../../config';
@@ -54,12 +59,28 @@ class BaseContainer extends Component {
 	getProfileContainer() {
 		return (
 			<ProfileContainer
+				firebase={firebase}
 				submitText='Create Stream' 
 				onClick={() => {
 					this.setState({ createModal: true });
 				}}
 			/>
 		);
+	}
+
+	renderLoginModal() {
+		if (this.state.loginModal) {
+			return (
+				<ModalContainer onClose={() => this.setState({ loginModal: false })}>
+					<ModalDialog onClose={() => this.setState({ loginModal: false })}>
+						<AuthContainer 
+							onSubmit={() => this.setState({ loginModal: false })} 
+							firebase={firebase}
+						/>
+					</ModalDialog>
+				</ModalContainer>
+			);
+		}
 	}
 
 	renderCreateStreamModal() {
@@ -76,13 +97,6 @@ class BaseContainer extends Component {
 								onChange={(event) => this.setState({ title: event.target.value })}
 								value={this.state.title}
 							/>
-							<input 
-								className={styles.input}
-								type='text'
-								placeholder='Enter your name'
-								onChange={(event) => this.setState({ name: event.target.value })}
-								value={this.state.name}
-							/>
 							<textarea
 								className={styles.input}
 								type='text'
@@ -98,7 +112,7 @@ class BaseContainer extends Component {
 									const newStream = {
 										name: this.state.title,
 										description: this.state.description,
-										streamerName: this.state.name,
+										streamerName: this.props.profile.name,
 										rating: 3.5,
 										streamId: uuid
 									};
@@ -106,11 +120,8 @@ class BaseContainer extends Component {
 									this.props.createStream(firebase, newStream);
 									this.props.setStream(uuid);
 
-									// TODO: stand in for authentication (just-in-time authentication lol)
-									this.props.setProfile({ name: this.state.name });
-
 									/* Clear out the modal and redirect elsewhere */
-									this.setState({ title: '', description: '', name: '', createModal: false });
+									this.setState({ title: '', description: '', createModal: false });
 									browserHistory.push('/streams/room');
 								}}
 							>
@@ -161,23 +172,34 @@ class BaseContainer extends Component {
 				title='lecto'
 				homeRedirect={() => browserHistory.push('/')}
 			>
-				<button
-					className='button'
-					style={{
-						...buttonStyle,
-						backgroundColor: '#26A65B',
-						borderColor: '#26A65B'
-					}}
-					onClick={() => { browserHistory.push('/profile'); }}
-				>
-					Login
-				</button>
+				{
+					!this.props.auth &&
+					<button
+						className='button'
+						style={{
+							...buttonStyle,
+							backgroundColor: '#26A65B',
+							borderColor: '#26A65B'
+						}}
+						onClick={() => { this.setState({ loginModal: true }); }}
+					>
+						Login
+					</button>
+				}
+				{
+					this.props.auth &&
+					<ProfileLinkContainer 
+						firebase={firebase} 
+						auth={this.props.auth}
+					/>
+				}
 			</Navbar>
 		);
 	}
 	render() {
 		return (
 			<div>
+				{ this.renderLoginModal() }
 				{ this.renderCreateStreamModal() }
 				{ this.renderNavbar() }
 				{ this.renderChildren() }
@@ -187,7 +209,8 @@ class BaseContainer extends Component {
 }
 
 const mapStateToProps = (state) => ({
-	profile: state.profile
+	profile: state.profile,
+	auth: state.auth
 });
 
 export default connect(mapStateToProps, { ...streamActions, ...profileActions })(BaseContainer);

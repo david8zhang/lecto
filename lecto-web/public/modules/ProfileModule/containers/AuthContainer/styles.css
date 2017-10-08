@@ -1,0 +1,8 @@
+.authWrapper {
+	display: flex;
+	flex-direction: column;
+}
+
+.authElement {
+	margin: 5px;
+}

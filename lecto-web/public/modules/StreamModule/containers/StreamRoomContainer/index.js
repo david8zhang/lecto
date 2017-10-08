@@ -93,6 +93,8 @@ class StreamRoomContainer extends Component {
 
 	componentWillUnmount() {
 		console.log('Unmounted');
+		const isHost = this.props.profile && this.props.profile.name === this.props.stream.streamerName;
+
 		/** Disable the webcam */
 		if (this.state.mediaStream) {
 			this.state.mediaStream.getAudioTracks()[0].stop();
@@ -100,10 +102,21 @@ class StreamRoomContainer extends Component {
 		}
 
 		/* disable the old stream so that it doesn't show up in the list of streams */
-		if (this.props.stream) {
+		if (this.props.stream && isHost) {
 			const newStream = { ...this.props.stream };
 			newStream.inactive = true;
 			this.props.editStream(this.props.firebase, newStream);
+		}
+
+		if (isHost) {
+			socket.emit('message', JSON.stringify({
+				type: 'End Session'
+			}));
+		} else {
+			socket.emit('message', JSON.stringify({
+				type: 'Leave Room',
+				payload: this.state.uid
+			}));
 		}
 	}
 
@@ -341,6 +354,27 @@ class StreamRoomContainer extends Component {
 				this.processSignal(parsedMsg);
 				break;
 			}
+			case 'End Session': {
+				if (!isHost) {
+					browserHistory.push('/');
+				}
+				break;
+			}
+			case 'Leave Room': {
+				if (isHost) {
+					const newRooms = [];
+					this.state.rooms.forEach((user) => {
+						console.log('payload', parsedMsg.payload);
+						console.log('uid', user.uid);
+						if (user.uid !== parsedMsg.payload) {
+							newRooms.push(user);
+						}
+					});
+					this.setState({ rooms: newRooms });
+					socket.emit('message', JSON.stringify({ type: 'Update Room', payload: newRooms }));
+				}
+				break;
+			}
 			default:
 				console.log('Nothing happened');
 		}
@@ -409,35 +443,39 @@ class StreamRoomContainer extends Component {
 		}
 	}
 
-	/**
-	 * Render all the names in the room
-	 * @return {Array} An array of names
-	 */
-	renderRoom() {
-		return this.state.rooms.map((user, index) => (
-			<div key={index}>
-				<p>{user.name}</p>
-			</div>
-		));
-	}
-
 	render() {
 		if (!this.props.stream) {
 			return <div />;
 		}
 		return (
-			<div>
-				<h1>Stream Room</h1>
-				{ this.renderNameInput() }
-				{
-					this.state.remoteUrl &&
-					<video controls autoPlay src={this.state.remoteUrl} />
-				}
-				{
-					this.state.videoSrc &&
-					<video controls autoPlay src={this.state.videoSrc} />
-				}
-				{ this.renderRoom() }
+			<div className={styles.roomWrapper}>
+				<div className={styles.videoSection}>
+					{ this.renderNameInput() }
+					{
+						this.state.remoteUrl &&
+						<video
+							className={styles.video}
+							controls
+							autoPlay
+							src={this.state.remoteUrl} 
+						/>
+					}
+					{
+						this.state.videoSrc &&
+						<video
+							className={styles.video}
+							controls 
+							autoPlay 
+							src={this.state.videoSrc} 
+						/>
+					}
+					<h1>{this.props.stream.name}</h1>
+					<p>{this.props.stream.streamerName}</p>
+					<hr />
+					<p>{this.props.stream.description}</p>
+				</div>
+				<div className={styles.chatSection}>
+				</div>
 			</div>
 		);
 	}

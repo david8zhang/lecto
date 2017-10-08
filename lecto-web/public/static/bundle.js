@@ -29807,6 +29807,7 @@
 				var _this2 = this;
 
 				return _react2.default.createElement(_ProfileModule.ProfileContainer, {
+					firebase: _firebase2.default,
 					submitText: 'Create Stream',
 					onClick: function onClick() {
 						_this2.setState({ createModal: true });
@@ -29814,20 +29815,46 @@
 				});
 			}
 		}, {
+			key: 'renderLoginModal',
+			value: function renderLoginModal() {
+				var _this3 = this;
+
+				if (this.state.loginModal) {
+					return _react2.default.createElement(
+						_reactModalDialog.ModalContainer,
+						{ onClose: function onClose() {
+								return _this3.setState({ loginModal: false });
+							} },
+						_react2.default.createElement(
+							_reactModalDialog.ModalDialog,
+							{ onClose: function onClose() {
+									return _this3.setState({ loginModal: false });
+								} },
+							_react2.default.createElement(_ProfileModule.AuthContainer, {
+								onSubmit: function onSubmit() {
+									return _this3.setState({ loginModal: false });
+								},
+								firebase: _firebase2.default
+							})
+						)
+					);
+				}
+			}
+		}, {
 			key: 'renderCreateStreamModal',
 			value: function renderCreateStreamModal() {
-				var _this3 = this;
+				var _this4 = this;
 
 				if (this.state.createModal) {
 					return _react2.default.createElement(
 						_reactModalDialog.ModalContainer,
 						{ onClose: function onClose() {
-								return _this3.setState({ createModal: false });
+								return _this4.setState({ createModal: false });
 							} },
 						_react2.default.createElement(
 							_reactModalDialog.ModalDialog,
 							{ onClose: function onClose() {
-									return _this3.setState({ createModal: false });
+									return _this4.setState({ createModal: false });
 								} },
 							_react2.default.createElement(
 								'div',
@@ -29842,18 +29869,9 @@
 									type: 'text',
 									placeholder: 'Enter a title for the stream',
 									onChange: function onChange(event) {
-										return _this3.setState({ title: event.target.value });
+										return _this4.setState({ title: event.target.value });
 									},
 									value: this.state.title
-								}),
-								_react2.default.createElement('input', {
-									className: _styles2.default.input,
-									type: 'text',
-									placeholder: 'Enter your name',
-									onChange: function onChange(event) {
-										return _this3.setState({ name: event.target.value });
-									},
-									value: this.state.name
 								}),
 								_react2.default.createElement('textarea', {
 									className: _styles2.default.input,
@@ -29861,7 +29879,7 @@
 									rows: '5',
 									placeholder: 'Enter a description',
 									onChange: function onChange(event) {
-										return _this3.setState({ description: event.target.value });
+										return _this4.setState({ description: event.target.value });
 									},
 									value: this.state.description
 								}),
@@ -29872,21 +29890,18 @@
 										onClick: function onClick() {
 											var uuid = uuidV4();
 											var newStream = {
-												name: _this3.state.title,
-												description: _this3.state.description,
-												streamerName: _this3.state.name,
+												name: _this4.state.title,
+												description: _this4.state.description,
+												streamerName: _this4.props.profile.name,
 												rating: 3.5,
 												streamId: uuid
 											};
 											/** Create the stream and set it as the stream to focus on in redux */
-											_this3.props.createStream(_firebase2.default, newStream);
-											_this3.props.setStream(uuid);
-
-											// TODO: stand in for authentication (just-in-time authentication lol)
-											_this3.props.setProfile({ name: _this3.state.name });
+											_this4.props.createStream(_firebase2.default, newStream);
+											_this4.props.setStream(uuid);
 
 											/* Clear out the modal and redirect elsewhere */
-											_this3.setState({ title: '', description: '', name: '', createModal: false });
+											_this4.setState({ title: '', description: '', createModal: false });
 											_reactRouter.browserHistory.push('/streams/room');
 										}
 									},
@@ -29935,6 +29950,8 @@
 		}, {
 			key: 'renderNavbar',
 			value: function renderNavbar() {
+				var _this5 = this;
+
 				var buttonStyle = _config.baseModuleConfig.buttonStyle;
 
 				return _react2.default.createElement(
@@ -29946,7 +29963,7 @@
 							return _reactRouter.browserHistory.push('/');
 						}
 					},
-					_react2.default.createElement(
+					!this.props.auth && _react2.default.createElement(
 						'button',
 						{
 							className: 'button',
@@ -29955,11 +29972,15 @@
 								borderColor: '#26A65B'
 							}),
 							onClick: function onClick() {
-								_reactRouter.browserHistory.push('/profile');
+								_this5.setState({ loginModal: true });
 							}
 						},
 						'Login'
-					)
+					),
+					this.props.auth && _react2.default.createElement(_ProfileModule.ProfileLinkContainer, {
+						firebase: _firebase2.default,
+						auth: this.props.auth
+					})
 				);
 			}
 		}, {
@@ -29968,6 +29989,7 @@
 				return _react2.default.createElement(
 					'div',
 					null,
+					this.renderLoginModal(),
 					this.renderCreateStreamModal(),
 					this.renderNavbar(),
 					this.renderChildren()
@@ -29980,7 +30002,8 @@
 
 	var mapStateToProps = function mapStateToProps(state) {
 		return {
-			profile: state.profile
+			profile: state.profile,
+			auth: state.auth
 		};
 	};
 
@@ -80480,6 +80503,8 @@
 			key: 'componentWillUnmount',
 			value: function componentWillUnmount() {
 				console.log('Unmounted');
+				var isHost = this.props.profile && this.props.profile.name === this.props.stream.streamerName;
+
 				/** Disable the webcam */
 				if (this.state.mediaStream) {
 					this.state.mediaStream.getAudioTracks()[0].stop();
@@ -80487,10 +80512,21 @@
 				}
 
 				/* disable the old stream so that it doesn't show up in the list of streams */
-				if (this.props.stream) {
+				if (this.props.stream && isHost) {
 					var newStream = _extends({}, this.props.stream);
 					newStream.inactive = true;
 					this.props.editStream(this.props.firebase, newStream);
+				}
+
+				if (isHost) {
+					socket.emit('message', JSON.stringify({
+						type: 'End Session'
+					}));
+				} else {
+					socket.emit('message', JSON.stringify({
+						type: 'Leave Room',
+						payload: this.state.uid
+					}));
 				}
 			}
 
@@ -80765,6 +80801,29 @@
 							this.processSignal(parsedMsg);
 							break;
 						}
+					case 'End Session':
+						{
+							if (!isHost) {
+								_reactRouter.browserHistory.push('/');
+							}
+							break;
+						}
+					case 'Leave Room':
+						{
+							if (isHost) {
+								var _newRooms2 = [];
+								this.state.rooms.forEach(function (user) {
+									console.log('payload', parsedMsg.payload);
+									console.log('uid', user.uid);
+									if (user.uid !== parsedMsg.payload) {
+										_newRooms2.push(user);
+									}
+								});
+								this.setState({ rooms: _newRooms2 });
+								socket.emit('message', JSON.stringify({ type: 'Update Room', payload: _newRooms2 }));
+							}
+							break;
+						}
 					default:
 						console.log('Nothing happened');
 				}
@@ -80855,27 +80914,6 @@
 					);
 				}
 			}
-
-			/**
-	   * Render all the names in the room
-	   * @return {Array} An array of names
-	   */
-
-		}, {
-			key: 'renderRoom',
-			value: function renderRoom() {
-				return this.state.rooms.map(function (user, index) {
-					return _react2.default.createElement(
-						'div',
-						{ key: index },
-						_react2.default.createElement(
-							'p',
-							null,
-							user.name
-						)
-					);
-				});
-			}
 		}, {
 			key: 'render',
 			value: function render() {
@@ -80884,16 +80922,41 @@
 				}
 				return _react2.default.createElement(
 					'div',
-					null,
+					{ className: _styles2.default.roomWrapper },
 					_react2.default.createElement(
-						'h1',
-						null,
-						'Stream Room'
+						'div',
+						{ className: _styles2.default.videoSection },
+						this.renderNameInput(),
+						this.state.remoteUrl && _react2.default.createElement('video', {
+							className: _styles2.default.video,
+							controls: true,
+							autoPlay: true,
+							src: this.state.remoteUrl
+						}),
+						this.state.videoSrc && _react2.default.createElement('video', {
+							className: _styles2.default.video,
+							controls: true,
+							autoPlay: true,
+							src: this.state.videoSrc
+						}),
+						_react2.default.createElement(
+							'h1',
+							null,
+							this.props.stream.name
+						),
+						_react2.default.createElement(
+							'p',
+							null,
+							this.props.stream.streamerName
+						),
+						_react2.default.createElement('hr', null),
+						_react2.default.createElement(
+							'p',
+							null,
+							this.props.stream.description
+						)
 					),
-					this.renderNameInput(),
-					this.state.remoteUrl && _react2.default.createElement('video', { controls: true, autoPlay: true, src: this.state.remoteUrl }),
-					this.state.videoSrc && _react2.default.createElement('video', { controls: true, autoPlay: true, src: this.state.videoSrc }),
-					this.renderRoom()
+					_react2.default.createElement('div', { className: _styles2.default.chatSection })
 				);
 			}
 		}]);
@@ -80928,7 +80991,7 @@
 	"use strict";
 
 	// removed by extract-text-webpack-plugin
-	module.exports = { "modalContent": "styles__modalContent___1ERnd" };
+	module.exports = { "modalContent": "styles__modalContent___1ERnd", "roomWrapper": "styles__roomWrapper___3CRQ1", "videoSection": "styles__videoSection___nwdsj", "video": "styles__video___AcRZY", "chatSection": "styles__chatSection___RIy6M" };
 
 /***/ }),
 /* 496 */
@@ -87402,6 +87465,18 @@
 	    return _containers.ProfileContainer;
 	  }
 	});
+	Object.defineProperty(exports, 'AuthContainer', {
+	  enumerable: true,
+	  get: function get() {
+	    return _containers.AuthContainer;
+	  }
+	});
+	Object.defineProperty(exports, 'ProfileLinkContainer', {
+	  enumerable: true,
+	  get: function get() {
+	    return _containers.ProfileLinkContainer;
+	  }
+	});
 
 	var _widgets = __webpack_require__(544);
 
@@ -87409,6 +87484,18 @@
 	  enumerable: true,
 	  get: function get() {
 	    return _widgets.ProfileReducer;
+	  }
+	});
+	Object.defineProperty(exports, 'AuthReducer', {
+	  enumerable: true,
+	  get: function get() {
+	    return _widgets.AuthReducer;
+	  }
+	});
+	Object.defineProperty(exports, 'authActions', {
+	  enumerable: true,
+	  get: function get() {
+	    return _widgets.authActions;
 	  }
 	});
 	Object.defineProperty(exports, 'profileActions', {
@@ -87437,6 +87524,24 @@
 	  }
 	});
 
+	var _AuthContainer = __webpack_require__(560);
+
+	Object.defineProperty(exports, 'AuthContainer', {
+	  enumerable: true,
+	  get: function get() {
+	    return _interopRequireDefault(_AuthContainer).default;
+	  }
+	});
+
+	var _ProfileLinkContainer = __webpack_require__(562);
+
+	Object.defineProperty(exports, 'ProfileLinkContainer', {
+	  enumerable: true,
+	  get: function get() {
+	    return _interopRequireDefault(_ProfileLinkContainer).default;
+	  }
+	});
+
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /***/ }),
@@ -87454,6 +87559,14 @@
 	var _react = __webpack_require__(2);
 
 	var _react2 = _interopRequireDefault(_react);
+
+	var _reactRedux = __webpack_require__(185);
+
+	var _widgets = __webpack_require__(544);
+
+	var _styles = __webpack_require__(563);
+
+	var _styles2 = _interopRequireDefault(_styles);
 
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -87473,13 +87586,28 @@
 		}
 
 		_createClass(ProfileContainer, [{
+			key: 'componentDidMount',
+			value: function componentDidMount() {
+				if (!this.props.profile) {
+					this.props.fetchProfile(this.props.auth, this.props.firebase);
+				}
+			}
+		}, {
 			key: 'render',
 			value: function render() {
 				var _this2 = this;
 
+				if (!this.props.profile) {
+					return _react2.default.createElement('div', null);
+				}
 				return _react2.default.createElement(
 					'div',
-					null,
+					{ className: _styles2.default.profileWrapper },
+					_react2.default.createElement(
+						'h1',
+						null,
+						this.props.profile.name
+					),
 					_react2.default.createElement(
 						'button',
 						{
@@ -87497,7 +87625,13 @@
 		return ProfileContainer;
 	}(_react.Component);
 
-	exports.default = ProfileContainer;
+	var mapStateToProps = function mapStateToProps(state) {
+		return {
+			profile: state.profile
+		};
+	};
+
+	exports.default = (0, _reactRedux.connect)(mapStateToProps, _widgets.profileActions)(ProfileContainer);
 
 /***/ }),
 /* 544 */
@@ -87508,7 +87642,7 @@
 	Object.defineProperty(exports, "__esModule", {
 	  value: true
 	});
-	exports.ProfileReducer = exports.profileActions = undefined;
+	exports.AuthReducer = exports.authActions = exports.ProfileReducer = exports.profileActions = undefined;
 
 	var _ProfileWidget = __webpack_require__(545);
 
@@ -87519,29 +87653,93 @@
 	  }
 	});
 
+	var _AuthWidget = __webpack_require__(557);
+
+	Object.defineProperty(exports, 'AuthReducer', {
+	  enumerable: true,
+	  get: function get() {
+	    return _interopRequireDefault(_AuthWidget).default;
+	  }
+	});
+
 	var _profileActions = _interopRequireWildcard(_ProfileWidget);
+
+	var _authActions = _interopRequireWildcard(_AuthWidget);
 
 	function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 	exports.profileActions = _profileActions;
+	exports.authActions = _authActions;
 
 /***/ }),
 /* 545 */
-/***/ (function(module, exports) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	'use strict';
 
 	Object.defineProperty(exports, "__esModule", {
 		value: true
 	});
+	exports.editProfile = exports.fetchProfile = exports.setProfile = undefined;
+
+	var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; /**
+	                                                                                                                                                                                                                                                                   * PROFILE WIDGET
+	                                                                                                                                                                                                                                                                   *
+	                                                                                                                                                                                                                                                                   * The profile widget defines the API interactions and the redux actions for
+	                                                                                                                                                                                                                                                                   * creating new profiles and fetching profiles
+	                                                                                                                                                                                                                                                                   *
+	                                                                                                                                                                                                                                                                   * @author David Zhang
+	                                                                                                                                                                                                                                                                   */
+
+	var _api = __webpack_require__(559);
+
+	var api = _interopRequireWildcard(_api);
+
+	function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
+
+	/** @type {String} The types for the actions */
+	var FETCH_PROFILE = 'FETCH_PROFILE';
+	var EDIT_PROFILE = 'EDIT_PROFILE';
 	var SET_PROFILE = 'SET_PROFILE';
 
 	var setProfile = exports.setProfile = function setProfile(profile) {
 		return {
 			type: SET_PROFILE,
 			payload: profile
+		};
+	};
+
+	/**
+	 * Fetch a profile given its uid
+	 * 
+	 * @param  {String} uid      the id of the user to fetch a profile for
+	 * @param  {Object} firebase The pre-configured firebase object to fetch stuff from
+	 * @return {Object}          The action to dispatch to the reducer
+	 */
+	var fetchProfile = exports.fetchProfile = function fetchProfile(uid, firebase) {
+		var getProfilePromise = api.fetchProfile(uid, firebase);
+		return {
+			type: FETCH_PROFILE,
+			payload: getProfilePromise
+		};
+	};
+
+	/**
+	 * Edit the profile given the id of the profile to edit and the
+	 * new profile to change it to
+	 * 
+	 * @param  {String} uid        the id of the profile to edit
+	 * @param  {Object} newProfile The new profile
+	 * @param  {Object} firebase   The pre-configured firebase object to edit stuff in
+	 * @return {Object}            The action to dispatch to the reducer
+	 */
+	var editProfile = exports.editProfile = function editProfile(uid, newProfile, firebase) {
+		var editProfilePromise = api.editProfile(uid, newProfile, firebase);
+		return {
+			type: EDIT_PROFILE,
+			payload: editProfilePromise
 		};
 	};
 
@@ -87553,6 +87751,18 @@
 			case SET_PROFILE:
 				{
 					return action.payload;
+				}
+			case FETCH_PROFILE:
+				{
+					return action.payload;
+				}
+			case EDIT_PROFILE:
+				{
+					var newState = _extends({}, state);
+					Object.keys(action.payload).forEach(function (key) {
+						newState[key] = action.payload[key];
+					});
+					return newState;
 				}
 			default:
 				return state;
@@ -87664,7 +87874,8 @@
 
 	exports.default = (0, _redux.combineReducers)({
 		streams: _StreamModule.StreamsReducer,
-		profile: _ProfileModule.ProfileReducer
+		profile: _ProfileModule.ProfileReducer,
+		auth: _ProfileModule.AuthReducer
 	});
 
 /***/ }),
@@ -88482,6 +88693,491 @@
 
 	module.exports = isArray;
 
+
+/***/ }),
+/* 557 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	exports.signUp = exports.logout = exports.login = undefined;
+
+	var _api = __webpack_require__(558);
+
+	var api = _interopRequireWildcard(_api);
+
+	function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
+
+	/* The different types for the actions */
+	var SET_AUTH = 'SET_AUTH';
+
+	/**
+	 * Log the user into their account
+	 * 
+	 * @param {Object} params 	The parameters for logging in
+	 * 
+	 * @param {Object} firebase An object that contains a firebase configuration for
+	 *                          serializing objects
+	 * 
+	 * @return {Object}      The action to be handed off to the reducer
+	 */
+	/**
+	 * AUTH WIDGET
+	 *
+	 * The authentication widget contains the reducers and the API
+	 * interactions for authenticating users and serializing player objects
+	 * to the database
+	 *
+	 * @author David Zhang
+	 */
+	var login = exports.login = function login(params, firebase) {
+	  var loginPromise = api.login(params, firebase);
+	  return {
+	    type: SET_AUTH,
+	    payload: loginPromise
+	  };
+	};
+
+	/**
+	 * Log out the user
+	 * 
+	 * @param  {Object} firebase An object that contains a firebase configuration for
+	 *                           serializing objects
+	 *                           
+	 * @return {Object}          The object to be handed off to the reducer
+	 */
+	var logout = exports.logout = function logout(firebase) {
+	  var logoutPromise = api.logout(firebase);
+	  return {
+	    type: SET_AUTH,
+	    payload: logoutPromise
+	  };
+	};
+
+	/**
+	 * Create a new user account
+	 * 
+	 * @param  {Object} params     the parameters for creating a new account in firebase
+	 * 
+	 * @param  {Object} attributes the attributes of the user account to create within firebase
+	 * 
+	 * @param  {Object} firebase   The firebase configuration object itself
+	 * 
+	 * @return {Object}            the action to be handed off to the reducer
+	 */
+	var signUp = exports.signUp = function signUp(params, attributes, firebase) {
+	  var signUpPromise = api.signUp(params, attributes, firebase);
+	  return {
+	    type: SET_AUTH,
+	    payload: signUpPromise
+	  };
+	};
+
+	/**
+	 * The reducer that handles the action dispatches above
+	 * @param  {Boolean} state  The state of the auth flag, which determines if the
+	 *                          user has logged in or not
+	 * @param  {Object} action The action that was dispatched
+	 * @return {Boolean}       The authentication flag defined by the redux reducer
+	 */
+
+	exports.default = function () {
+	  var state = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
+	  var action = arguments[1];
+
+	  switch (action.type) {
+	    case SET_AUTH:
+	      {
+	        return action.payload;
+	      }
+	    default:
+	      return state;
+	  }
+	};
+
+/***/ }),
+/* 558 */
+/***/ (function(module, exports) {
+
+	'use strict';
+
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+
+	var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+
+	/**
+	 * Log the user in
+	 * 
+	 * @param  {Object} params Contains the email and password to check credentials against
+	 *
+	 * @param {Object} firebase The pre-configured firebase object that stores the 
+	 *                          serialized information
+	 * 
+	 * @return {Promise}       A promise that resolves when user is successfully logged in
+	 */
+	var login = exports.login = function login(params, firebase) {
+	  var email = params.email,
+	      password = params.password;
+
+	  return firebase.auth().signInWithEmailAndPassword(email, password).then(function () {
+	    var uid = firebase.auth().currentUser.uid;
+
+	    /** Return the user id of the authenticated user */
+
+	    return uid;
+	  }).catch(function (err) {
+	    return err;
+	  });
+	};
+
+	/**
+	 * Log the user out
+	 * 
+	 * @param  {Object} firebase The pre-configured firebase object that stores the
+	 *                           serialized information
+	 *                           
+	 * @return {Promise}          A promise that resolves when user is successfully logged out
+	 */
+	var logout = exports.logout = function logout(firebase) {
+	  return firebase.auth().signOut().then(function () {
+	    return null;
+	  }).catch(function (err) {
+	    return err;
+	  });
+	};
+
+	/**
+	 * Register a new account and create a new user in the database
+	 * 
+	 * @param  {Object} params Contains the email and password to create a new user with
+	 *
+	 * @param {Object} attributes Contains the attributes of the player to fill in as defaults
+	 *
+	 * @param {Object} firebase The firebase object that stores the serialized information
+	 * 
+	 * @return {Promise}        A promise that resolves when the user is successfully created
+	 */
+	var signUp = exports.signUp = function signUp(params, attributes, firebase) {
+	  var email = params.email,
+	      password = params.password;
+
+	  return firebase.auth().createUserWithEmailAndPassword(email, password).then(function () {
+	    var uid = firebase.auth().currentUser.uid;
+
+	    // Create a new node in the firebase table that serializes user data
+
+	    var newUserRef = firebase.database().ref('users');
+	    newUserRef.child(uid).update(_extends({}, attributes, {
+	      uid: uid
+	    }));
+
+	    /** Return the user id of the authenticated user */
+	    return uid;
+	  }).catch(function (err) {
+	    return err;
+	  });
+	};
+
+/***/ }),
+/* 559 */
+/***/ (function(module, exports) {
+
+	'use strict';
+
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+
+	var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+
+	/**
+	 * Fetch the profile given a user id
+	 * @param  {String} uid      the id of the user's profile to fetch
+	 * @param  {Object} firebase The pre-configured firebase object
+	 * @return {Promise}          A promise that resolves to the value of the profile
+	 */
+	var fetchProfile = exports.fetchProfile = function fetchProfile(uid, firebase) {
+	  var profileRef = firebase.database().ref('users/' + uid);
+	  return profileRef.once('value').then(function (userSnap) {
+	    return userSnap.val();
+	  });
+	};
+
+	/**
+	 * Edit the profile given the id of the profile to edit and the
+	 * new profile to change it to
+	 * 
+	 * @param  {String} uid        the id of the profile to edit
+	 * @param  {Object} newProfile The new profile
+	 * @param  {Object} firebase   The pre-configured firebase object to edit stuff in
+	 * @return {Object}            The action to dispatch to the reducer
+	 */
+	var editProfile = exports.editProfile = function editProfile(uid, newProfile, firebase) {
+	  var profileRef = firebase.database().ref('users/' + uid);
+	  return profileRef.update(_extends({}, newProfile)).then(function () {
+	    return newProfile;
+	  });
+	};
+
+/***/ }),
+/* 560 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, "__esModule", {
+		value: true
+	});
+
+	var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+	var _react = __webpack_require__(2);
+
+	var _react2 = _interopRequireDefault(_react);
+
+	var _reactRedux = __webpack_require__(185);
+
+	var _widgets = __webpack_require__(544);
+
+	var _styles = __webpack_require__(561);
+
+	var _styles2 = _interopRequireDefault(_styles);
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+	function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+	var AuthContainer = function (_Component) {
+		_inherits(AuthContainer, _Component);
+
+		function AuthContainer(props) {
+			_classCallCheck(this, AuthContainer);
+
+			var _this = _possibleConstructorReturn(this, (AuthContainer.__proto__ || Object.getPrototypeOf(AuthContainer)).call(this, props));
+
+			_this.state = {
+				login: true,
+				username: '',
+				password: '',
+				confirmPass: ''
+			};
+			return _this;
+		}
+
+		_createClass(AuthContainer, [{
+			key: 'onSubmit',
+			value: function onSubmit() {
+				var params = { email: this.state.email, password: this.state.password };
+				if (this.state.login) {
+					this.props.login(params, this.props.firebase);
+					this.props.onSubmit();
+				} else if (this.state.password !== this.state.confirmPass) {
+					this.setState({ error: 'Passwords do not match' });
+				} else {
+					this.props.signUp(params, { name: this.state.username }, this.props.firebase);
+					this.props.onSubmit();
+				}
+			}
+		}, {
+			key: 'render',
+			value: function render() {
+				var _this2 = this;
+
+				return _react2.default.createElement(
+					'div',
+					{ className: _styles2.default.authWrapper },
+					this.state.error && _react2.default.createElement(
+						'p',
+						{ style: { color: 'red' } },
+						this.state.error
+					),
+					_react2.default.createElement(
+						'h1',
+						null,
+						this.state.login ? 'Log In' : 'Sign up'
+					),
+					!this.state.login && _react2.default.createElement('input', {
+						className: _styles2.default.authElement,
+						placeholder: 'Enter a username',
+						type: 'text',
+						value: this.state.username,
+						onChange: function onChange(event) {
+							return _this2.setState({ username: event.target.value });
+						}
+					}),
+					_react2.default.createElement('input', {
+						className: _styles2.default.authElement,
+						placeholder: 'Enter an email',
+						type: 'text',
+						value: this.state.email,
+						onChange: function onChange(event) {
+							return _this2.setState({ email: event.target.value });
+						}
+					}),
+					_react2.default.createElement('input', {
+						className: _styles2.default.authElement,
+						placeholder: 'Enter a password',
+						type: 'password',
+						value: this.state.password,
+						onChange: function onChange(event) {
+							return _this2.setState({ password: event.target.value });
+						}
+					}),
+					!this.state.login && _react2.default.createElement('input', {
+						className: _styles2.default.authElement,
+						placeholder: 'Confirm your password',
+						type: 'password',
+						value: this.state.confirmPass,
+						onChange: function onChange(event) {
+							return _this2.setState({ confirmPass: event.target.value });
+						}
+					}),
+					_react2.default.createElement(
+						'a',
+						{
+							style: { cursor: 'pointer', marginTop: '10px' },
+							onClick: function onClick() {
+								return _this2.setState({ login: !_this2.state.login });
+							}
+						},
+						this.state.login ? "Don't have an account? Sign up here" : 'Have an account already? Log in here'
+					),
+					_react2.default.createElement(
+						'button',
+						{
+							style: { marginTop: '10px' },
+							onClick: function onClick() {
+								return _this2.onSubmit();
+							},
+							className: 'button-primary ' + _styles2.default.authElement
+						},
+						this.state.login ? 'Login' : 'Sign Up'
+					)
+				);
+			}
+		}]);
+
+		return AuthContainer;
+	}(_react.Component);
+
+	var mapStateToProps = function mapStateToProps(state) {
+		return {
+			auth: state.auth,
+			profile: state.profile
+		};
+	};
+
+	exports.default = (0, _reactRedux.connect)(mapStateToProps, _extends({}, _widgets.authActions, _widgets.profileActions))(AuthContainer);
+
+/***/ }),
+/* 561 */
+/***/ (function(module, exports) {
+
+	"use strict";
+
+	// removed by extract-text-webpack-plugin
+	module.exports = { "authWrapper": "styles__authWrapper___hTBvD", "authElement": "styles__authElement___3DEvn" };
+
+/***/ }),
+/* 562 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, "__esModule", {
+		value: true
+	});
+
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+	var _react = __webpack_require__(2);
+
+	var _react2 = _interopRequireDefault(_react);
+
+	var _reactRouter = __webpack_require__(217);
+
+	var _reactRedux = __webpack_require__(185);
+
+	var _widgets = __webpack_require__(544);
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+	function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+	var ProfileLinkContainer = function (_Component) {
+		_inherits(ProfileLinkContainer, _Component);
+
+		function ProfileLinkContainer() {
+			_classCallCheck(this, ProfileLinkContainer);
+
+			return _possibleConstructorReturn(this, (ProfileLinkContainer.__proto__ || Object.getPrototypeOf(ProfileLinkContainer)).apply(this, arguments));
+		}
+
+		_createClass(ProfileLinkContainer, [{
+			key: 'componentDidMount',
+			value: function componentDidMount() {
+				this.props.fetchProfile(this.props.auth, this.props.firebase);
+			}
+		}, {
+			key: 'render',
+			value: function render() {
+				if (!this.props.profile) {
+					return _react2.default.createElement('div', null);
+				}
+				var name = this.props.profile.name;
+
+				return _react2.default.createElement(
+					'div',
+					null,
+					_react2.default.createElement(
+						'a',
+						{
+							style: { color: 'white', cursor: 'pointer', padding: '20px' },
+							onClick: function onClick() {
+								return _reactRouter.browserHistory.push('/profile');
+							}
+						},
+						'Hello, ',
+						name
+					)
+				);
+			}
+		}]);
+
+		return ProfileLinkContainer;
+	}(_react.Component);
+
+	var mapStateToProps = function mapStateToProps(state) {
+		return {
+			profile: state.profile
+		};
+	};
+
+	exports.default = (0, _reactRedux.connect)(mapStateToProps, _widgets.profileActions)(ProfileLinkContainer);
+
+/***/ }),
+/* 563 */
+/***/ (function(module, exports) {
+
+	"use strict";
+
+	// removed by extract-text-webpack-plugin
+	module.exports = { "profileWrapper": "styles__profileWrapper___akukf" };
 
 /***/ })
 /******/ ]);

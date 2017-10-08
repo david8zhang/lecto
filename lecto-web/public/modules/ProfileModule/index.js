@@ -1,2 +1,2 @@
-export { ProfileContainer } from './containers';
-export { ProfileReducer, profileActions } from './widgets';
+export { ProfileContainer, AuthContainer, ProfileLinkContainer } from './containers';
+export { ProfileReducer, AuthReducer, authActions, profileActions } from './widgets';
