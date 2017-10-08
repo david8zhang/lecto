@@ -2,12 +2,9 @@ import React, {Component} from 'react'
 import {render} from 'react-dom'
 import {Launcher} from '../../src'
 import messageHistory from './messageHistory';
-import TestArea from './TestArea';
-import Header from './Header';
-import Footer from './Footer';
-import monsterImgUrl from "./../assets/monster.png";
 import Highlight from "react-highlight.js";
 import './../assets/styles'
+import io from 'socket.io-client';
 
 
 
@@ -18,14 +15,24 @@ class Demo extends Component {
     this.state = {
       messageList: messageHistory,
       newMessagesCount: 0,
-      isOpen: false
+      isOpen: false, 
+      socket: io('http://chatlecto.herokuapp.com')
     };
   }
 
   _onMessageWasSent(message) {
+    this.state.socket.emit('chat message', message['data']['text']);
     this.setState({
       messageList: [...this.state.messageList, message]
     })
+  }
+
+  componentDidMount() {
+     this.state.socket.on('chat message', this._update);
+  }
+
+  _update = (e) => {
+    this._sendMessage(e)
   }
 
   _sendMessage(text) {
@@ -51,10 +58,6 @@ class Demo extends Component {
 
   render() {
     return <div>
-      <Header />
-      <TestArea
-        onMessage={this._sendMessage.bind(this)}
-      />
       <Launcher
         agentProfile={{
           teamName: 'react-live-chat',
@@ -66,8 +69,7 @@ class Demo extends Component {
         handleClick={this._handleClick.bind(this)}
         isOpen={this.state.isOpen}
       />
-      <img className="demo-monster-img" src={monsterImgUrl} />
-      <Footer />
+
     </div>
   }
 }
