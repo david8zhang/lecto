@@ -1,0 +1,40 @@
+.jumboStyle {
+	display: flex;
+	flex-direction: column;
+	align-content: center;
+	justify-content: center;
+	padding: 80px;
+}
+
+.jumboBrand {
+	width: 250px;
+	height: 250px;
+}
+
+.jumboInfo {
+	display: flex;
+	flex-direction: row;
+	justify-content: center;
+}
+
+.jumboText {
+	display: flex;
+	flex-direction: column;
+	font-family: 'Avenir', sans-serif;
+}
+
+.jumboTextAction {
+	display: flex;
+	flex-direction: column;
+	margin-left: 35px;
+}
+
+.jumboTitle {
+	font-size: 50px;
+	margin-bottom: 5px;
+}
+
+.actionButtonsStyle {
+	display: flex;
+	flex-direction: row;
+}

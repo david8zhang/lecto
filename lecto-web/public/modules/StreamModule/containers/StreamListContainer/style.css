@@ -1,0 +1,23 @@
+.outerWrap {
+	padding: 21px;
+}
+
+.streamList {
+	flex-wrap: wrap;
+	display: flex;
+	flex-direction: row;
+}
+
+.streamList h1 {
+	font-size: 30px;
+}
+
+.streamItem {
+	cursor: pointer;
+	background-color: #ddd;
+	padding: 20px;
+	margin: 5px;
+	box-sizing: border-box;
+	width: 24%;
+	height: 24%;
+}

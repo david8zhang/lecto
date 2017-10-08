@@ -5,5 +5,5 @@ import { Route } from 'react-router';
 import { BaseContainer } from './modules';
 
 export default (
-	<Route path='/' component={BaseContainer} />
+	<Route path='/*' component={BaseContainer} />
 );
