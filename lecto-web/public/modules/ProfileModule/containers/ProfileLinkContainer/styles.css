@@ -1,0 +1,4 @@
+.profileLink {
+	display: flex;
+	flex-direction: column;
+}

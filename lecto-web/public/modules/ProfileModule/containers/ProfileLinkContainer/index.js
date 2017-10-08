@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import { browserHistory } from 'react-router';
 import { connect } from 'react-redux';
-import { profileActions } from '../../widgets';
+import { profileActions, authActions } from '../../widgets';
 
 class ProfileLinkContainer extends Component {
 	componentDidMount() {
@@ -20,6 +20,16 @@ class ProfileLinkContainer extends Component {
 				>	
 					Hello, { name }
 				</a>
+				<button
+					style={{ color: 'white' }}
+					className='button primary'
+					onClick={() => {
+						this.props.setProfile(null);
+						this.props.logout(this.props.firebase);
+					}}
+				>
+					Logout
+				</button>
 			</div>
 		);
 	}
@@ -29,4 +39,6 @@ const mapStateToProps = (state) => ({
 	profile: state.profile
 });
 
-export default connect(mapStateToProps, profileActions)(ProfileLinkContainer);
+const actions = { ...profileActions, ...authActions };
+
+export default connect(mapStateToProps, actions)(ProfileLinkContainer);

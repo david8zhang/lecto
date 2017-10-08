@@ -20,6 +20,12 @@ module.exports = {
         }, {
             test: /\.css$/,
             loader: ExtractTextPlugin.extract('style-loader', 'css-loader?modules&importLoaders=1&localIdentName=[name]__[local]___[hash:base64:5]!postcss-loader')
+        },{
+            test: /\.(jpe?g|png|gif|svg)$/i,
+            loaders: [
+                'file-loader?hash=sha512&digest=hex&name=[hash].[ext]',
+                'image-webpack-loader?bypassOnDebug&optimizationLevel=7&interlaced=false'
+            ]
         }]
     },
     postcss: function() {

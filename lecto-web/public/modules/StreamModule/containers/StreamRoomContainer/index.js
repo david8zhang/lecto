@@ -475,6 +475,11 @@ class StreamRoomContainer extends Component {
 					<p>{this.props.stream.description}</p>
 				</div>
 				<div className={styles.chatSection}>
+					<iframe 
+						src='https://chatlecto.herokuapp.com'
+						width='100%'
+						height='100%'
+					/>
 				</div>
 			</div>
 		);
