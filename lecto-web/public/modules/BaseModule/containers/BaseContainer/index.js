@@ -44,7 +44,10 @@ class BaseContainer extends Component {
 
 	getStreamRoom() {
 		return (
-			<StreamRoomContainer profile={this.props.profile} />
+			<StreamRoomContainer 
+				profile={this.props.profile}
+				firebase={firebase}
+			/>
 		);
 	}
 

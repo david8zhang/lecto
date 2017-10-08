@@ -76,7 +76,10 @@ const toArray = (streams) => {
 	if (streams) {
 		const newStreams = [];
 		Object.keys(streams).forEach((streamerId) => {
-			newStreams.push(streams[streamerId]);
+			/** don't show any inactive streams */
+			if (!streams[streamerId].inactive) {
+				newStreams.push(streams[streamerId]);
+			}
 		});
 		return newStreams;
 	}

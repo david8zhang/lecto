@@ -14,7 +14,7 @@ export const fetchStreams = (firebase) => {
  * @param  {Object} newStream the new stream object
  * @return {Promise}           A promise that evaluates to creating a new stream
  */
-export const createStream = (firebase, newStream) => {
+export const editStream = (firebase, newStream) => {
 	const { streamId } = newStream;
 	const streamRef = firebase.database().ref(`streams/${streamId}`);
 	return streamRef.update({

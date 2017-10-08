@@ -19,7 +19,7 @@ export const setStream = (streamId) => ({
 });
 
 export const createStream = (firebase, newStream) => {
-	const createStreamPromise = api.createStream(firebase, newStream);
+	const createStreamPromise = api.editStream(firebase, newStream);
 	return {
 		type: CREATE_STREAM,
 		payload: createStreamPromise
@@ -48,11 +48,12 @@ export default (state = {}, action) => {
 		}
 		case CREATE_STREAM: {
 			const newState = { ...state };
-			const { streamersId } = action.payload;
+			const { streamId } = action.payload;
+			console.log('Streamer Id', streamId);
 			if (!newState.allStreams) {
-				newState.allStreams = { [streamersId]: action.payload };
+				newState.allStreams = { [streamId]: action.payload };
 			} else {
-				newState.allStreams[streamersId] = action.payload;
+				newState.allStreams[streamId] = action.payload;
 			}
 			return newState;
 		}

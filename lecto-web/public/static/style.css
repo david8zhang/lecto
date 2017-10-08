@@ -187,6 +187,15 @@
 	box-sizing: border-box;
 	width: 24%;
 	height: 24%;
+}.styles__modalContent___1ERnd {
+	width: 500px;
+	display: -webkit-box;
+	display: -ms-flexbox;
+	display: flex;
+	-webkit-box-orient: vertical;
+	-webkit-box-direction: normal;
+	    -ms-flex-direction: column;
+	        flex-direction: column;
 }.styles__input___14-w2 {
 	margin: 5px;
 }
