@@ -20,6 +20,7 @@ socket.on('connection', function(client){
 	
 	// Success!  Now listen to messages to be received
 	client.on('message',function(event){ 
+		socket.emit('message', event);
 		//console.log('Received message from client!',event);
 	});
 	client.on('disconnect',function(){
